@@ -1,0 +1,267 @@
+[
+  {
+    "id": "tab_week3",
+    "type": "tab",
+    "label": "Week 3 - IoT MQTT Simulation",
+    "disabled": false,
+    "info": "Three simulated IoT devices publish telemetry through MQTT. Gateway subscribes, simulates latency/loss, validates data and reports metrics."
+  },
+  {
+    "id": "dev1_in",
+    "type": "inject",
+    "z": "tab_week3",
+    "name": "Device 1 - Temperature",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "{}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "dev1_fn"
+      ]
+    ]
+  },
+  {
+    "id": "dev1_fn",
+    "type": "function",
+    "z": "tab_week3",
+    "name": "D1 telemetry",
+    "func": "const t=20+Math.random()*10;\\nmsg.topic='iot/device1/telemetry';\\nmsg.payload={deviceId:'device1',type:'temperature',value:Number(t.toFixed(2)),unit:'C',timestamp:new Date().toISOString(),seq:(flow.get('d1seq')||0)+1};\\nflow.set('d1seq',msg.payload.seq);\\nreturn msg;",
+    "outputs": 1,
+    "x": 350,
+    "y": 100,
+    "wires": [
+      [
+        "mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "dev2_in",
+    "type": "inject",
+    "z": "tab_week3",
+    "name": "Device 2 - Humidity",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "7",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "{}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 180,
+    "wires": [
+      [
+        "dev2_fn"
+      ]
+    ]
+  },
+  {
+    "id": "dev2_fn",
+    "type": "function",
+    "z": "tab_week3",
+    "name": "D2 telemetry",
+    "func": "const h=45+Math.random()*25;\\nmsg.topic='iot/device2/telemetry';\\nmsg.payload={deviceId:'device2',type:'humidity',value:Number(h.toFixed(2)),unit:'%',timestamp:new Date().toISOString(),seq:(flow.get('d2seq')||0)+1};\\nflow.set('d2seq',msg.payload.seq);\\nreturn msg;",
+    "outputs": 1,
+    "x": 350,
+    "y": 180,
+    "wires": [
+      [
+        "mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "dev3_in",
+    "type": "inject",
+    "z": "tab_week3",
+    "name": "Device 3 - Light",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "9",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "{}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 260,
+    "wires": [
+      [
+        "dev3_fn"
+      ]
+    ]
+  },
+  {
+    "id": "dev3_fn",
+    "type": "function",
+    "z": "tab_week3",
+    "name": "D3 telemetry",
+    "func": "const l=250+Math.random()*500;\\nmsg.topic='iot/device3/telemetry';\\nmsg.payload={deviceId:'device3',type:'light',value:Number(l.toFixed(2)),unit:'lux',timestamp:new Date().toISOString(),seq:(flow.get('d3seq')||0)+1};\\nflow.set('d3seq',msg.payload.seq);\\nreturn msg;",
+    "outputs": 1,
+    "x": 350,
+    "y": 260,
+    "wires": [
+      [
+        "mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_out",
+    "type": "mqtt out",
+    "z": "tab_week3",
+    "name": "MQTT Publish",
+    "topic": "",
+    "qos": "1",
+    "retain": "",
+    "broker": "mqtt_broker",
+    "x": 570,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "mqtt_broker",
+    "type": "mqtt-broker",
+    "name": "Local Mosquitto",
+    "broker": "mosquitto",
+    "port": "1883",
+    "clientid": "node-red-week3",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  },
+  {
+    "id": "mqtt_in",
+    "type": "mqtt in",
+    "z": "tab_week3",
+    "name": "Gateway Subscriber",
+    "topic": "iot/+/telemetry",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "mqtt_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 180,
+    "y": 390,
+    "wires": [
+      [
+        "latency_fn"
+      ]
+    ]
+  },
+  {
+    "id": "latency_fn",
+    "type": "function",
+    "z": "tab_week3",
+    "name": "Latency + Error Handler",
+    "func": "const delay=100+Math.floor(Math.random()*401);\\nconst drop=Math.random()<0.05;\\nmsg._sim={delayMs:delay,receivedAt:Date.now()};\\nif(drop){node.warn('Simulated packet loss for '+msg.topic);flow.set('drops',(flow.get('drops')||0)+1);return null;}\\nsetTimeout(()=>node.send(msg),delay);\\nreturn;",
+    "outputs": 1,
+    "x": 400,
+    "y": 390,
+    "wires": [
+      [
+        "validate_fn"
+      ]
+    ]
+  },
+  {
+    "id": "validate_fn",
+    "type": "function",
+    "z": "tab_week3",
+    "name": "Validate + Metrics",
+    "func": "const p=msg.payload;\\nconst valid=p&&p.deviceId&&p.type&&typeof p.value==='number'&&p.timestamp;\\nconst m=flow.get('metrics')||{received:0,valid:0,invalid:0,totalLatency:0,maxLatency:0};\\nm.received++;\\nif(valid){m.valid++;const lat=Date.now()-msg._sim.receivedAt;m.totalLatency+=lat;m.maxLatency=Math.max(m.maxLatency,lat);msg.payload={...p,simulatedLatencyMs:lat};}else{m.invalid++;msg.payload={error:'Invalid telemetry',original:p};}\\nflow.set('metrics',m);msg._metrics=m;return msg;",
+    "outputs": 1,
+    "x": 650,
+    "y": 390,
+    "wires": [
+      [
+        "debug_data",
+        "metrics_fn"
+      ]
+    ]
+  },
+  {
+    "id": "debug_data",
+    "type": "debug",
+    "z": "tab_week3",
+    "name": "Gateway Data",
+    "active": true,
+    "tosidebar": true,
+    "complete": "payload",
+    "x": 880,
+    "y": 350,
+    "wires": []
+  },
+  {
+    "id": "metrics_fn",
+    "type": "function",
+    "z": "tab_week3",
+    "name": "Performance Metrics",
+    "func": "const m=msg._metrics;const drops=flow.get('drops')||0;msg.payload={received:m.received,valid:m.valid,invalid:m.invalid,simulatedDrops:drops,deliveryRate:m.received?Number((m.valid/m.received*100).toFixed(2)):0,avgLatencyMs:m.valid?Number((m.totalLatency/m.valid).toFixed(2)):0,maxLatencyMs:m.maxLatency};return msg;",
+    "outputs": 1,
+    "x": 880,
+    "y": 430,
+    "wires": [
+      [
+        "debug_metrics"
+      ]
+    ]
+  },
+  {
+    "id": "debug_metrics",
+    "type": "debug",
+    "z": "tab_week3",
+    "name": "Metrics Output",
+    "active": true,
+    "tosidebar": true,
+    "complete": "payload",
+    "x": 1090,
+    "y": 430,
+    "wires": []
+  },
+  {
+    "id": "error_in",
+    "type": "inject",
+    "z": "tab_week3",
+    "name": "Send malformed packet (test)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic"
+      }
+    ],
+    "topic": "iot/test/telemetry",
+    "payload": "{\"deviceId\":\"device1\",\"type\":\"temperature\",\"value\":\"BAD_DATA\",\"timestamp\":\"test\"}",
+    "payloadType": "json",
+    "x": 170,
+    "y": 500,
+    "wires": [
+      [
+        "mqtt_out"
+      ]
+    ]
+  }
+]
